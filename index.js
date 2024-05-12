@@ -1,7 +1,7 @@
 const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
-//const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken')
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 const app = express();
 const port = process.env.PORT || 5000;
@@ -42,13 +42,15 @@ const client = new MongoClient(uri, {
       const userCollection = client.db('volunteerDB').collection('user');
       const volunteerRequestCollection = client.db('volunteerDB').collection('volunteerRequest');
 
-      //auth related api
-
-      // app.post('/jwt', async(req, res)=>{
-      //   const user = req.body;
-      //   console.log(user);
-      //   res.send(user)
-      // })
+      //jwt generate
+       app.post('/jwt', async(req, res)=>{
+         const user = req.body;
+         console.log(user);
+         const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET,{
+          expiresIn: "365d"
+         })
+         res.send(user)
+       })
 
       //volunteer related apis
       app.delete('/volunteer/:id', async(req, res)=>{
