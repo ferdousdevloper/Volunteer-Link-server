@@ -66,7 +66,7 @@ async function run() {
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "1m",
+        expiresIn: "365d",
       });
       res
         .cookie("token", token, {
@@ -231,7 +231,7 @@ async function run() {
       res.send(result);
     });
     // my post apis
-    app.get("/myPost/:email", verifyToken, async (req, res) => {
+    app.get("/myPost/:email", verifyToken,  async (req, res) => {
       const tokenEmail = req.user.email;
       const email = req.params.email;
       if (tokenEmail !== email) {
@@ -239,7 +239,8 @@ async function run() {
       }
       console.log(tokenEmail);
       const result = await volunteerCollection
-        .find({ organizer_email: req.params.email })
+        .find({ 
+          organizer_email: req.params.email })
         .toArray();
       res.send(result);
     });
@@ -252,12 +253,7 @@ async function run() {
       res.send(user);
     });
 
-    app.post("/user", async (req, res) => {
-      const user = req.body;
-      console.log(user);
-      const result = await userCollection.insertOne(user);
-      res.send(result);
-    });
+   
 
     // Send a ping to confirm a successful connection
     //await client.db("admin").command({ ping: 1 });
