@@ -12,32 +12,32 @@ const corsOptions = {
   origin: [
     "http://localhost:5173",
     "http://localhost:5174",
-    //firebase link
+    "https://volunteer-link-f176e.web.app",
   ],
   credentials: true,
   optionSuccessStatus: 200,
 };
 app.use(cors(corsOptions));
 app.use(express.json());
-app.use(cookieParser())
+app.use(cookieParser());
 
 // verify jwt middleware
 const verifyToken = (req, res, next) => {
-  const token = req.cookies?.token
-  if (!token) return res.status(401).send({ message: 'unauthorized access' })
+  const token = req.cookies?.token;
+  if (!token) return res.status(401).send({ message: "unauthorized access" });
   if (token) {
     jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, decoded) => {
       if (err) {
-        console.log(err)
-        return res.status(401).send({ message: 'unauthorized access' })
+        console.log(err);
+        return res.status(401).send({ message: "unauthorized access" });
       }
-      console.log(decoded)
+      console.log(decoded);
 
-      req.user = decoded
-      next()
-    })
+      req.user = decoded;
+      next();
+    });
   }
-}
+};
 
 const uri = `mongodb+srv://${process.env.DB_USER}:${process.env.DB_PASS}@cluster0.dizfzlf.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0`;
 
@@ -66,7 +66,7 @@ async function run() {
     app.post("/jwt", async (req, res) => {
       const user = req.body;
       const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET, {
-        expiresIn: "365d",
+        expiresIn: "1m",
       });
       res
         .cookie("token", token, {
@@ -78,6 +78,20 @@ async function run() {
     });
 
     // Clear token on logout
+
+
+    app.post("/logout", async (req, res) => {
+      
+      res
+        .clearCookie("token", {
+          //httpOnly: true,
+          secure: true,
+          sameSite:"none",
+          maxAge : 0,
+        })
+        .send({ success: true });
+    });
+    /*
     app.get("/logout", (req, res) => {
       res
         .clearCookie("token", {
@@ -88,11 +102,10 @@ async function run() {
         })
         .send({ success: true });
     });
-
-
+    */
 
     //volunteer related apis
-    app.delete("/volunteer/:id", async (req, res) => {
+    app.delete("/volunteer/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await volunteerCollection.deleteOne(query);
@@ -100,7 +113,7 @@ async function run() {
     });
 
     //for update single post
-    app.get("/volunteer/:id",  async (req, res) => {
+    app.get("/volunteer/:id", async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await volunteerCollection.findOne(query);
@@ -160,7 +173,7 @@ async function run() {
     });
 
     // for count update
-    app.patch("/requestUpdate/:id", verifyToken, async (req, res) => {
+    app.patch("/requestUpdate/:id", async (req, res) => {
       const id = req.params.id;
       const filter = { _id: new ObjectId(id) };
       const requestUpdate = req.body;
@@ -191,13 +204,20 @@ async function run() {
       res.send(result);
     });
 
-    app.get("/beVolunteer", verifyToken, async (req, res) => {
-      const cursor = volunteerRequestCollection.find();
-      const request = await cursor.toArray();
-      res.send(request);
+    app.get("/beVolunteer/:email", verifyToken, async (req, res) => {
+      const tokenEmail = req.user.email;
+      const email = req.params.email;
+      if (tokenEmail !== email) {
+        return res.status(403).send({ message: "forbidden access" });
+      }
+      console.log(tokenEmail);
+      const result = await volunteerRequestCollection
+        .find({ userEmail: req.params.email })
+        .toArray();
+      res.send(result);
     });
 
-    app.delete("/beVolunteer/:id", async (req, res) => {
+    app.delete("/beVolunteer/:id", verifyToken, async (req, res) => {
       const id = req.params.id;
       const query = { _id: new ObjectId(id) };
       const result = await volunteerRequestCollection.deleteOne(query);
@@ -212,10 +232,10 @@ async function run() {
     });
     // my post apis
     app.get("/myPost/:email", verifyToken, async (req, res) => {
-      const tokenEmail = req.user.email
-      const email = req.params.email
+      const tokenEmail = req.user.email;
+      const email = req.params.email;
       if (tokenEmail !== email) {
-        return res.status(403).send({ message: 'forbidden access' })
+        return res.status(403).send({ message: "forbidden access" });
       }
       console.log(tokenEmail);
       const result = await volunteerCollection
